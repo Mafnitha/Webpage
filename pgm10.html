@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Allocator & Garbage Collector Visualization</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #333;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        button:disabled {
+            background: #555;
+            color: #777;
+            border-color: #555;
+            cursor: not-allowed;
+        }
+        
+        input {
+            padding: 8px;
+            background: #333;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            font-family: inherit;
+            width: 60px;
+        }
+        
+        .memory-view {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 300px;
+        }
+        
+        .linked-list-view {
+            background: #1a1a2e;
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 400px;
+        }
+        
+        .list-node {
+            background: #16213e;
+            border: 2px solid #0ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .list-node.allocated {
+            border-color: #00ff00;
+            background: #0e3e0e;
+        }
+        
+        .list-node.free {
+            border-color: #ff4444;
+            background: #3e0e0e;
+        }
+        
+        .list-node.being-collected {
+            border-color: #ff6600;
+            background: #3e1e0e;
+            animation: nodeCollect 1s ease-out;
+        }
+        
+        @keyframes nodeCollect {
+            0% { opacity: 1; transform: translateX(0); }
+            50% { opacity: 0.5; transform: translateX(10px); }
+            100% { opacity: 0; transform: translateX(-100px); }
+        }
+        
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .node-address {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .node-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            background: #0a0a0a;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+        
+        .node-field {
+            text-align: center;
+        }
+        
+        .field-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .field-value {
+            font-size: 14px;
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 3px;
+            background: #222;
+        }
+        
+        .field-value.id {
+            color: #00ff00;
+        }
+        
+        .field-value.allocated {
+            color: #00ff00;
+        }
+        
+        .field-value.free {
+            color: #ff4444;
+        }
+        
+        .field-value.pointer {
+            color: #0ff;
+        }
+        
+        .pointer-arrow {
+            position: absolute;
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #0ff;
+            font-size: 20px;
+        }
+        
+        .head-pointer {
+            background: #4a4a00;
+            color: #ffff00;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+            border: 2px solid #ffff00;
+        }
+        
+        .null-pointer {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .memory-blocks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            min-height: 200px;
+        }
+        
+        .block {
+            background: #444;
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            min-width: 100px;
+            position: relative;
+            transition: all 0.5s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        
+        .block.allocated {
+            background: #004400;
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        
+        .block.free {
+            background: #440000;
+            border-color: #ff4444;
+            color: #ff4444;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+        }
+        
+        .block.being-collected {
+            animation: fadeOut 1s ease-out;
+            background: #ff6600;
+            border-color: #ff6600;
+            color: white;
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+        
+        .arrow {
+            font-size: 24px;
+            color: #00ff00;
+            align-self: center;
+        }
+        
+        .block-info {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .block-status {
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .pointers {
+            font-size: 10px;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+        
+        .log {
+            background: #111;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+        }
+        
+        .log-entry.gc {
+            border-left-color: #ff6600;
+            color: #ff6600;
+        }
+        
+        .log-entry.error {
+            border-left-color: #ff4444;
+            color: #ff4444;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 50px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Memory Allocator & Garbage Collector Visualization</h1>
+            <p>Interactive demonstration of doubly linked list memory management</p>
+        </div>
+        
+        <div class="controls">
+            <button onclick="allocateMemory()">Allocate Memory</button>
+            <input type="number" id="deallocateId" placeholder="ID" min="1">
+            <button onclick="deallocateMemory()">Mark as Free</button>
+            <button onclick="runGarbageCollector()">Run Garbage Collector</button>
+            <button onclick="clearAll()">Clear All</button>
+            <button onclick="autoDemo()">Auto Demo</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalBlocks">0</div>
+                <div class="stat-label">Total Blocks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="allocatedBlocks">0</div>
+                <div class="stat-label">Allocated</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="freeBlocks">0</div>
+                <div class="stat-label">Free</div>
+            </div>
+        </div>
+        
+        <div class="memory-view">
+            <h3>Memory Block Chain (Visual Representation)</h3>
+            <div class="memory-blocks" id="memoryBlocks">
+                <div class="empty-state">No memory blocks allocated yet. Click "Allocate Memory" to start!</div>
+            </div>
+        </div>
+        
+        <div class="linked-list-view">
+            <h3>Doubly Linked List Structure (Memory Layout)</h3>
+            <div id="linkedListView">
+                <div class="empty-state">No nodes in the linked list yet.</div>
+            </div>
+        </div>
+        
+        <div class="log" id="log">
+            <h3>System Log</h3>
+        </div>
+    </div>
+
+    <script>
+        function generateAddress() {
+            return '0x' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+        }
+
+        class Block {
+            constructor(id) {
+                this.id = id;
+                this.allocated = true;
+                this.prev = null;
+                this.next = null;
+                this.address = generateAddress();
+            }
+        }
+
+        let head = null;
+        let blockCounter = 0;
+        let isRunning = false;
+
+        function addLogEntry(message, type = 'normal') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStats() {
+            let total = 0, allocated = 0, free = 0;
+            let current = head;
+            
+            while (current) {
+                total++;
+                if (current.allocated) allocated++;
+                else free++;
+                current = current.next;
+            }
+            
+            document.getElementById('totalBlocks').textContent = total;
+            document.getElementById('allocatedBlocks').textContent = allocated;
+            document.getElementById('freeBlocks').textContent = free;
+        }
+
+        function renderLinkedList() {
+            const container = document.getElementById('linkedListView');
+            container.innerHTML = '';
+            
+            if (!head) {
+                container.innerHTML = '<div class="empty-state">No nodes in the linked list yet.</div>';
+                return;
+            }
+            
+            // Head pointer indicator
+            const headPointer = document.createElement('div');
+            headPointer.className = 'head-pointer';
+            headPointer.innerHTML = `HEAD → ${head.address}`;
+            container.appendChild(headPointer);
+            
+            let current = head;
+            
+            while (current) {
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = `list-node ${current.allocated ? 'allocated' : 'free'}`;
+                nodeDiv.id = `node-${current.id}`;
+                
+                const prevAddr = current.prev ? current.prev.address : 'NULL';
+                const nextAddr = current.next ? current.next.address : 'NULL';
+                
+                nodeDiv.innerHTML = `
+                    <div class="node-header">
+                        <span>Block ${current.id}</span>
+                        <span class="node-address">${current.address}</span>
+                    </div>
+                    <div class="node-content">
+                        <div class="node-field">
+                            <div class="field-label">ID</div>
+                            <div class="field-value id">${current.id}</div>
+                        </div>
+                        <div class="node-field">
+                            <div class="field-label">Allocated</div>
+                            <div class="field-value ${current.allocated ? 'allocated' : 'free'}">
+                                ${current.allocated ? 'TRUE' : 'FALSE'}
+                            </div>
+                        </div>
+                        <div class="node-field">
+                            <div class="field-label">Prev</div>
+                            <div class="field-value pointer ${current.prev ? '' : 'null-pointer'}">
+                                ${prevAddr}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <div class="node-field">
+                            <div class="field-label">Next</div>
+                            <div class="field-value pointer ${current.next ? '' : 'null-pointer'}">
+                                ${nextAddr}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                if (current.next) {
+                    nodeDiv.innerHTML += '<div class="pointer-arrow">↓</div>';
+                }
+                
+                container.appendChild(nodeDiv);
+                current = current.next;
+            }
+        }
+
+        function renderMemory() {
+            const container = document.getElementById('memoryBlocks');
+            container.innerHTML = '';
+            
+            if (!head) {
+                container.innerHTML = '<div class="empty-state">No memory blocks allocated yet. Click "Allocate Memory" to start!</div>';
+                return;
+            }
+            
+            let current = head;
+            let isFirst = true;
+            
+            while (current) {
+                if (!isFirst) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'arrow';
+                    arrow.innerHTML = '⟷';
+                    container.appendChild(arrow);
+                }
+                
+                const blockDiv = document.createElement('div');
+                blockDiv.className = `block ${current.allocated ? 'allocated' : 'free'}`;
+                blockDiv.id = `block-${current.id}`;
+                
+                const prevId = current.prev ? current.prev.id : 'NULL';
+                const nextId = current.next ? current.next.id : 'NULL';
+                
+                blockDiv.innerHTML = `
+                    <div class="block-info">Block ${current.id}</div>
+                    <div class="block-status">${current.allocated ? 'Allocated' : 'Free'}</div>
+                    <div class="pointers">prev: ${prevId} | next: ${nextId}</div>
+                `;
+                
+                container.appendChild(blockDiv);
+                current = current.next;
+                isFirst = false;
+            }
+            
+            updateStats();
+            renderLinkedList();
+        }
+
+        function allocateMemory() {
+            if (isRunning) return;
+            
+            const newBlock = new Block(++blockCounter);
+            
+            if (!head) {
+                head = newBlock;
+            } else {
+                let temp = head;
+                while (temp.next) {
+                    temp = temp.next;
+                }
+                temp.next = newBlock;
+                newBlock.prev = temp;
+            }
+            
+            addLogEntry(`Memory Block ${newBlock.id} allocated.`);
+            renderMemory();
+        }
+
+        function deallocateMemory() {
+            if (isRunning) return;
+            
+            const id = parseInt(document.getElementById('deallocateId').value);
+            if (!id) {
+                addLogEntry('Please enter a valid Block ID.', 'error');
+                return;
+            }
+            
+            let temp = head;
+            while (temp) {
+                if (temp.id === id) {
+                    if (temp.allocated) {
+                        temp.allocated = false;
+                        addLogEntry(`Memory Block ${id} marked as unused.`);
+                        renderMemory();
+                        document.getElementById('deallocateId').value = '';
+                        return;
+                    } else {
+                        addLogEntry(`Block ${id} is already marked as free.`, 'error');
+                        return;
+                    }
+                }
+                temp = temp.next;
+            }
+            
+            addLogEntry(`Block ${id} not found.`, 'error');
+        }
+
+        async function runGarbageCollector() {
+            if (isRunning) return;
+            isRunning = true;
+            
+            addLogEntry('Starting Garbage Collection...', 'gc');
+            
+            let temp = head;
+            let collectCount = 0;
+            
+            while (temp) {
+                const next = temp.next;
+                
+                if (!temp.allocated) {
+                    collectCount++;
+                    addLogEntry(`Garbage Collector: Cleaning Block ${temp.id}`, 'gc');
+                    
+                    // Visual effect for both views
+                    const blockElement = document.getElementById(`block-${temp.id}`);
+                    const nodeElement = document.getElementById(`node-${temp.id}`);
+                    
+                    if (blockElement) {
+                        blockElement.classList.add('being-collected');
+                    }
+                    if (nodeElement) {
+                        nodeElement.classList.add('being-collected');
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Remove from linked list
+                    if (temp.prev) {
+                        temp.prev.next = temp.next;
+                    } else {
+                        head = temp.next;
+                    }
+                    
+                    if (temp.next) {
+                        temp.next.prev = temp.prev;
+                    }
+                    
+                    renderMemory();
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                temp = next;
+            }
+            
+            if (collectCount === 0) {
+                addLogEntry('Garbage Collector: No blocks to clean.', 'gc');
+            } else {
+                addLogEntry(`Garbage Collection complete. Cleaned ${collectCount} blocks.`, 'gc');
+            }
+            
+            isRunning = false;
+        }
+
+        function clearAll() {
+            if (isRunning) return;
+            
+            head = null;
+            blockCounter = 0;
+            addLogEntry('All memory blocks cleared.');
+            renderMemory();
+        }
+
+        async function autoDemo() {
+            if (isRunning) return;
+            
+            addLogEntry('Starting Auto Demo...', 'gc');
+            
+            // Allocate some blocks
+            for (let i = 0; i < 5; i++) {
+                allocateMemory();
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Mark some as free
+            let current = head;
+            let count = 0;
+            while (current && count < 3) {
+                if (count % 2 === 0) {
+                    current.allocated = false;
+                    addLogEntry(`Memory Block ${current.id} marked as unused.`);
+                    renderMemory();
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+                current = current.next;
+                count++;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Run garbage collector
+            await runGarbageCollector();
+            
+            addLogEntry('Auto Demo completed!', 'gc');
+        }
+
+        // Initialize
+        renderMemory();
+        addLogEntry('Memory Management System initialized.');
+        addLogEntry('Visualization shows both block chain and detailed linked list structure.');
+    </script>
+</body>
+</html>
