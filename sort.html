@@ -1,0 +1,743 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
+
+const SortingVisualizer = () => {
+  const [activeTab, setActiveTab] = useState('bubble');
+  const [array, setArray] = useState([64, 34, 25, 12, 22, 11, 90]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [steps, setSteps] = useState([]);
+  const [comparisons, setComparisons] = useState(0);
+  const [swaps, setSwaps] = useState(0);
+
+  const generateSteps = useCallback((arr, algorithm) => {
+    const steps = [];
+    const tempArr = [...arr];
+    let comps = 0;
+    let swapCount = 0;
+
+    // Add initial state
+    steps.push({
+      array: [...tempArr],
+      comparisons: comps,
+      swaps: swapCount,
+      description: `Initial array: [${tempArr.join(', ')}]`
+    });
+
+    switch (algorithm) {
+      case 'bubble':
+        for (let i = 0; i < tempArr.length - 1; i++) {
+          steps.push({
+            array: [...tempArr],
+            pass: i + 1,
+            sorted: Array.from({length: tempArr.length}, (_, k) => k >= tempArr.length - i),
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Pass ${i + 1}: Moving largest unsorted element to position ${tempArr.length - 1 - i}`
+          });
+          
+          for (let j = 0; j < tempArr.length - i - 1; j++) {
+            comps++;
+            steps.push({
+              array: [...tempArr],
+              comparing: [j, j + 1],
+              pass: i + 1,
+              sorted: Array.from({length: tempArr.length}, (_, k) => k >= tempArr.length - i),
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Pass ${i + 1}: Comparing ${tempArr[j]} and ${tempArr[j + 1]} at positions ${j} and ${j + 1}`
+            });
+            
+            if (tempArr[j] > tempArr[j + 1]) {
+              [tempArr[j], tempArr[j + 1]] = [tempArr[j + 1], tempArr[j]];
+              swapCount++;
+              steps.push({
+                array: [...tempArr],
+                swapping: [j, j + 1],
+                pass: i + 1,
+                sorted: Array.from({length: tempArr.length}, (_, k) => k >= tempArr.length - i),
+                comparisons: comps,
+                swaps: swapCount,
+                description: `Pass ${i + 1}: Swapped! ${tempArr[j + 1]} > ${tempArr[j]}, swapping positions ${j} and ${j + 1}`
+              });
+            } else {
+              steps.push({
+                array: [...tempArr],
+                noSwap: [j, j + 1],
+                pass: i + 1,
+                sorted: Array.from({length: tempArr.length}, (_, k) => k >= tempArr.length - i),
+                comparisons: comps,
+                swaps: swapCount,
+                description: `Pass ${i + 1}: No swap needed. ${tempArr[j]} <= ${tempArr[j + 1]}`
+              });
+            }
+          }
+          
+          steps.push({
+            array: [...tempArr],
+            bubbledElement: tempArr.length - 1 - i,
+            pass: i + 1,
+            sorted: Array.from({length: tempArr.length}, (_, k) => k >= tempArr.length - i - 1),
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Pass ${i + 1} complete: Element ${tempArr[tempArr.length - 1 - i]} is in its final position`
+          });
+        }
+        
+        steps.push({
+          array: [...tempArr],
+          sorted: Array(tempArr.length).fill(true),
+          comparisons: comps,
+          swaps: swapCount,
+          description: 'Bubble Sort Complete! All elements are now sorted.'
+        });
+        break;
+
+      case 'insertion':
+        steps.push({
+          array: [...tempArr],
+          current: 0,
+          sorted: [true, ...Array(tempArr.length - 1).fill(false)],
+          comparisons: comps,
+          swaps: swapCount,
+          description: 'Starting Insertion Sort: First element is considered sorted'
+        });
+        
+        for (let i = 1; i < tempArr.length; i++) {
+          const key = tempArr[i];
+          let j = i - 1;
+          
+          steps.push({
+            array: [...tempArr],
+            current: i,
+            key: key,
+            keyPosition: i,
+            sortedBoundary: i - 1,
+            sorted: Array.from({length: tempArr.length}, (_, k) => k < i),
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Iteration ${i}: Inserting element ${key} from position ${i} into sorted portion [0...${i-1}]`
+          });
+
+          while (j >= 0 && tempArr[j] > key) {
+            comps++;
+            steps.push({
+              array: [...tempArr],
+              comparing: [j, i],
+              current: i,
+              key: key,
+              keyPosition: i,
+              shiftingElement: j,
+              sorted: Array.from({length: tempArr.length}, (_, k) => k < i),
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Comparing key ${key} with ${tempArr[j]} at position ${j}. ${tempArr[j]} > ${key}, need to shift right`
+            });
+            
+            tempArr[j + 1] = tempArr[j];
+            swapCount++;
+            
+            steps.push({
+              array: [...tempArr],
+              shifting: [j, j + 1],
+              current: i,
+              key: key,
+              keyPosition: j + 1,
+              sorted: Array.from({length: tempArr.length}, (_, k) => k < i),
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Shifting element ${tempArr[j + 1]} from position ${j} to position ${j + 1}`
+            });
+            
+            j--;
+          }
+          
+          if (j >= 0) {
+            comps++;
+            steps.push({
+              array: [...tempArr],
+              comparing: [j, i],
+              current: i,
+              key: key,
+              keyPosition: j + 1,
+              foundPosition: j + 1,
+              sorted: Array.from({length: tempArr.length}, (_, k) => k < i),
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Found correct position: ${tempArr[j]} <= ${key}, so ${key} goes at position ${j + 1}`
+            });
+          }
+          
+          tempArr[j + 1] = key;
+          
+          steps.push({
+            array: [...tempArr],
+            inserted: j + 1,
+            insertedValue: key,
+            sorted: Array.from({length: tempArr.length}, (_, k) => k <= i),
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Inserted ${key} at position ${j + 1}. Sorted portion is now [0...${i}]`
+          });
+        }
+        
+        steps.push({
+          array: [...tempArr],
+          sorted: Array(tempArr.length).fill(true),
+          comparisons: comps,
+          swaps: swapCount,
+          description: 'Insertion Sort Complete! All elements have been inserted into their correct positions.'
+        });
+        break;
+
+      case 'quick':
+        const quickSortSteps = (arr, low, high, depth = 0) => {
+          if (low < high) {
+            steps.push({
+              array: [...arr],
+              range: [low, high],
+              depth: depth,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Depth ${depth}: Sorting range [${low}...${high}]`
+            });
+            
+            const pi = partition(arr, low, high, depth);
+            
+            steps.push({
+              array: [...arr],
+              pivotPlaced: pi,
+              leftRange: [low, pi - 1],
+              rightRange: [pi + 1, high],
+              depth: depth,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Pivot ${arr[pi]} placed at ${pi}. Left: [${low}...${pi-1}], Right: [${pi+1}...${high}]`
+            });
+            
+            quickSortSteps(arr, low, pi - 1, depth + 1);
+            quickSortSteps(arr, pi + 1, high, depth + 1);
+          } else if (low === high) {
+            steps.push({
+              array: [...arr],
+              singleElement: low,
+              depth: depth,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Single element ${arr[low]} at position ${low} - already sorted`
+            });
+          }
+        };
+
+        const partition = (arr, low, high, depth) => {
+          // Move pivot (first element) to end first for easier partitioning
+          const pivotValue = arr[low];
+          [arr[low], arr[high]] = [arr[high], arr[low]];
+          swapCount++;
+          
+          steps.push({
+            array: [...arr],
+            swapping: [low, high],
+            pivotValue: pivotValue,
+            depth: depth,
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Moving pivot ${pivotValue} from position ${low} to position ${high} for partitioning`
+          });
+          
+          const pivot = arr[high]; // Now pivot is at the end
+          let i = low - 1;
+          
+          steps.push({
+            array: [...arr],
+            pivot: high,
+            pivotValue: pivot,
+            range: [low, high],
+            depth: depth,
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Partitioning range [${low}...${high}]: using pivot ${pivot} (originally at position ${low})`
+          });
+
+          for (let j = low; j <= high - 1; j++) {
+            comps++;
+            steps.push({
+              array: [...arr],
+              comparing: [j, high],
+              pivot: high,
+              pivotValue: pivot,
+              range: [low, high],
+              partitionIndex: i + 1,
+              depth: depth,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Comparing ${arr[j]} with pivot ${pivot}. Partition index: ${i + 1}`
+            });
+
+            if (arr[j] < pivot) {
+              i++;
+              if (i !== j) {
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                swapCount++;
+                steps.push({
+                  array: [...arr],
+                  swapping: [i, j],
+                  pivot: high,
+                  pivotValue: pivot,
+                  range: [low, high],
+                  partitionIndex: i + 1,
+                  depth: depth,
+                  comparisons: comps,
+                  swaps: swapCount,
+                  description: `${arr[j]} < ${pivot}, swapping positions ${i} and ${j}. New partition index: ${i + 1}`
+                });
+              } else {
+                steps.push({
+                  array: [...arr],
+                  noSwapNeeded: j,
+                  pivot: high,
+                  pivotValue: pivot,
+                  range: [low, high],
+                  partitionIndex: i + 1,
+                  depth: depth,
+                  comparisons: comps,
+                  swaps: swapCount,
+                  description: `${arr[j]} < ${pivot}, already in correct position. Partition index: ${i + 1}`
+                });
+              }
+            } else {
+              steps.push({
+                array: [...arr],
+                stayInPlace: j,
+                pivot: high,
+                pivotValue: pivot,
+                range: [low, high],
+                partitionIndex: i + 1,
+                depth: depth,
+                comparisons: comps,
+                swaps: swapCount,
+                description: `${arr[j]} >= ${pivot}, stays in right partition. Partition index: ${i + 1}`
+              });
+            }
+          }
+          
+          [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+          swapCount++;
+          steps.push({
+            array: [...arr],
+            swapping: [i + 1, high],
+            pivotFinalPosition: i + 1,
+            pivotValue: pivot,
+            depth: depth,
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Final step: placing pivot ${pivot} at its correct position ${i + 1}`
+          });
+          
+          return i + 1;
+        };
+
+        quickSortSteps(tempArr, 0, tempArr.length - 1);
+        break;
+
+      case 'merge':
+        const mergeSortSteps = (arr, start = 0, end = arr.length - 1, level = 0) => {
+          if (start >= end) return;
+          
+          const mid = Math.floor((start + end) / 2);
+          
+          steps.push({
+            array: [...tempArr],
+            dividing: [start, mid, end],
+            level: level,
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Level ${level}: Dividing array [${start}...${end}] into [${start}...${mid}] and [${mid + 1}...${end}]`
+          });
+          
+          mergeSortSteps(arr, start, mid, level + 1);
+          mergeSortSteps(arr, mid + 1, end, level + 1);
+          merge(arr, start, mid, end, level);
+        };
+
+        const merge = (arr, start, mid, end, level) => {
+          const left = [];
+          const right = [];
+          
+          // Copy data to temp arrays
+          for (let i = start; i <= mid; i++) {
+            left.push(arr[i]);
+          }
+          for (let i = mid + 1; i <= end; i++) {
+            right.push(arr[i]);
+          }
+          
+          steps.push({
+            array: [...tempArr],
+            merging: [start, mid, end],
+            leftArray: left,
+            rightArray: right,
+            level: level,
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Level ${level}: Merging subarrays [${left.join(', ')}] and [${right.join(', ')}]`
+          });
+
+          let i = 0, j = 0, k = start;
+          
+          // Merge the temp arrays back
+          while (i < left.length && j < right.length) {
+            comps++;
+            steps.push({
+              array: [...tempArr],
+              merging: [start, mid, end],
+              comparing: [start + i, mid + 1 + j],
+              comparingValues: [left[i], right[j]],
+              level: level,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Comparing ${left[i]} and ${right[j]}`
+            });
+            
+            if (left[i] <= right[j]) {
+              tempArr[k] = left[i];
+              steps.push({
+                array: [...tempArr],
+                merging: [start, mid, end],
+                merged: k,
+                mergedValue: left[i],
+                level: level,
+                comparisons: comps,
+                swaps: swapCount,
+                description: `Placed ${left[i]} at position ${k} from left array`
+              });
+              i++;
+            } else {
+              tempArr[k] = right[j];
+              steps.push({
+                array: [...tempArr],
+                merging: [start, mid, end],
+                merged: k,
+                mergedValue: right[j],
+                level: level,
+                comparisons: comps,
+                swaps: swapCount,
+                description: `Placed ${right[j]} at position ${k} from right array`
+              });
+              j++;
+            }
+            k++;
+          }
+
+          // Copy remaining elements
+          while (i < left.length) {
+            tempArr[k] = left[i];
+            steps.push({
+              array: [...tempArr],
+              merging: [start, mid, end],
+              merged: k,
+              mergedValue: left[i],
+              level: level,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Copying remaining element ${left[i]} from left array to position ${k}`
+            });
+            i++;
+            k++;
+          }
+
+          while (j < right.length) {
+            tempArr[k] = right[j];
+            steps.push({
+              array: [...tempArr],
+              merging: [start, mid, end],
+              merged: k,
+              mergedValue: right[j],
+              level: level,
+              comparisons: comps,
+              swaps: swapCount,
+              description: `Copying remaining element ${right[j]} from right array to position ${k}`
+            });
+            j++;
+            k++;
+          }
+          
+          steps.push({
+            array: [...tempArr],
+            mergeComplete: [start, end],
+            level: level,
+            comparisons: comps,
+            swaps: swapCount,
+            description: `Level ${level}: Completed merging range [${start}...${end}]`
+          });
+        };
+
+        mergeSortSteps(tempArr);
+        break;
+
+      default:
+        break;
+    }
+
+    return { steps, comparisons: comps, swaps: swapCount };
+  }, []);
+
+  useEffect(() => {
+    const result = generateSteps(array, activeTab);
+    setSteps(result.steps);
+    setCurrentStep(0);
+    setComparisons(result.comparisons);
+    setSwaps(result.swaps);
+    setIsPlaying(false);
+  }, [array, activeTab, generateSteps]);
+
+  useEffect(() => {
+    let interval;
+    if (isPlaying && currentStep < steps.length - 1) {
+      interval = setInterval(() => {
+        setCurrentStep(prev => prev + 1);
+      }, 1000);
+    } else if (currentStep >= steps.length - 1) {
+      setIsPlaying(false);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, currentStep, steps.length]);
+
+  const resetAnimation = () => {
+    setCurrentStep(0);
+    setIsPlaying(false);
+  };
+
+  const nextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const getBarColor = (index, step) => {
+    if (!step) return 'bg-blue-500';
+    
+    // Priority color assignments (order matters)
+    if (step.swapping && step.swapping.includes(index)) return 'bg-orange-500';
+    if (step.comparing && step.comparing.includes(index)) return 'bg-red-500';
+    if (step.current === index) return 'bg-yellow-500';
+    if (step.inserted === index) return 'bg-green-400';
+    if (step.merged === index) return 'bg-cyan-400';
+    if (step.pivot === index) return 'bg-purple-500';
+    if (step.pivotFinalPosition === index) return 'bg-purple-300';
+    if (step.pivotPlaced === index) return 'bg-purple-300';
+    if (step.bubbledElement === index) return 'bg-lime-500';
+    if (step.shifting && step.shifting.includes(index)) return 'bg-yellow-400';
+    if (step.keyPosition === index && step.key) return 'bg-amber-500';
+    if (step.noSwap && step.noSwap.includes(index)) return 'bg-blue-300';
+    if (step.singleElement === index) return 'bg-teal-400';
+    if (step.mergeComplete && index >= step.mergeComplete[0] && index <= step.mergeComplete[1]) return 'bg-green-300';
+    if (step.sorted && step.sorted[index]) return 'bg-green-600';
+    
+    return 'bg-blue-500';
+  };
+
+  const currentStepData = steps[currentStep] || { 
+    array: array, 
+    comparisons: 0, 
+    swaps: 0, 
+    description: 'Click Play to start the sorting visualization' 
+  };
+
+  const algorithms = {
+    bubble: 'Bubble Sort',
+    insertion: 'Insertion Sort',
+    quick: 'Quick Sort',
+    merge: 'Merge Sort'
+  };
+
+  return (
+    <div className="w-full max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+        Sorting Algorithms Visualizer
+      </h1>
+      
+      {/* Algorithm Tabs */}
+      <div className="flex flex-wrap justify-center mb-6 border-b">
+        {Object.entries(algorithms).map(([key, name]) => (
+          <button
+            key={key}
+            className={`px-4 py-2 mx-1 mb-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === key
+                ? 'bg-blue-500 text-white border-b-2 border-blue-500'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            onClick={() => setActiveTab(key)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
+      {/* Array Input */}
+      <div className="mb-6 text-center">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Array (comma-separated numbers):
+        </label>
+        <input
+          type="text"
+          value={array.join(', ')}
+          onChange={(e) => {
+            const newArray = e.target.value.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+            if (newArray.length > 0) setArray(newArray);
+          }}
+          className="px-3 py-2 border border-gray-300 rounded-md text-center"
+          placeholder="64, 34, 25, 12, 22, 11, 90"
+        />
+      </div>
+
+      {/* Controls */}
+      <div className="flex justify-center items-center gap-4 mb-6">
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          disabled={currentStep >= steps.length - 1}
+        >
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+          {isPlaying ? 'Pause' : 'Play'}
+        </button>
+        
+        <button
+          onClick={nextStep}
+          className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+          disabled={currentStep >= steps.length - 1}
+        >
+          <SkipForward size={16} />
+          Next Step
+        </button>
+        
+        <button
+          onClick={resetAnimation}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          <RotateCcw size={16} />
+          Reset
+        </button>
+      </div>
+
+      {/* Progress */}
+      <div className="mb-6">
+        <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <span>Step {currentStep + 1} of {steps.length}</span>
+          <div className="flex items-center gap-2">
+            <span>Comparisons: {currentStepData.comparisons}</span>
+            <span>|</span>
+            <span>Swaps/Moves: {currentStepData.swaps}</span>
+            {steps.length > 0 && (
+              <>
+                <span>|</span>
+                <span>Total Steps: {steps.length}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0}%` }}
+          ></div>
+        </div>
+      </div>
+
+      {/* Visualization */}
+      <div className="mb-6">
+        <div className="flex items-end justify-center gap-2 h-64 bg-gray-50 p-4 rounded-lg">
+          {currentStepData.array.map((value, index) => (
+            <div key={`${index}-${value}`} className="flex flex-col items-center">
+              <div
+                className={`w-12 transition-all duration-500 ${getBarColor(index, currentStepData)} rounded-t`}
+                style={{ height: `${(value / Math.max(...array)) * 200}px` }}
+              ></div>
+              <span className="text-xs mt-1 font-medium">{value}</span>
+              <span className="text-xs text-gray-500">{index}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Step Description */}
+      <div className="text-center p-4 bg-gray-100 rounded-lg">
+        <p className="text-gray-700 font-medium mb-2">{currentStepData.description}</p>
+        {currentStepData.leftArray && currentStepData.rightArray && (
+          <div className="text-sm text-gray-600">
+            <span>Left: [{currentStepData.leftArray.join(', ')}] | Right: [{currentStepData.rightArray.join(', ')}]</span>
+          </div>
+        )}
+        {currentStepData.key && (
+          <div className="text-sm text-gray-600">
+            <span>Key element: {currentStepData.key}</span>
+          </div>
+        )}
+        {currentStepData.pass && (
+          <div className="text-sm text-gray-600">
+            <span>Pass: {currentStepData.pass}</span>
+          </div>
+        )}
+        {currentStepData.depth !== undefined && (
+          <div className="text-sm text-gray-600">
+            <span>Recursion Depth: {currentStepData.depth}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-6 grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-blue-500 rounded"></div>
+          <span>Unsorted</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-red-500 rounded"></div>
+          <span>Comparing</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-orange-500 rounded"></div>
+          <span>Swapping</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-600 rounded"></div>
+          <span>Sorted</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-purple-500 rounded"></div>
+          <span>Pivot</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+          <span>Current</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-400 rounded"></div>
+          <span>Inserted</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-cyan-400 rounded"></div>
+          <span>Merged</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-lime-500 rounded"></div>
+          <span>Bubbled</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+          <span>Shifting</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-amber-500 rounded"></div>
+          <span>Key Element</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-teal-400 rounded"></div>
+          <span>Single Item</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SortingVisualizer;
