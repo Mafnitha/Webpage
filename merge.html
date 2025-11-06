@@ -1,0 +1,317 @@
+import React, { useState } from 'react';
+import { Play, RotateCcw, ChevronDown } from 'lucide-react';
+
+const MergeSortVisualization = () => {
+  const initialArray = [12, 65, 34, 9, 56, 43, 10];
+  const [currentLevel, setCurrentLevel] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Generate the complete merge sort tree structure
+  const generateMergeSortTree = () => {
+    const levels = [];
+    
+    // Level 0 - Initial array
+    levels.push({
+      level: 0,
+      type: 'divide',
+      arrays: [[12, 65, 34, 9, 56, 43, 10]],
+      description: 'Initial unsorted array'
+    });
+
+    // Level 1 - First split
+    levels.push({
+      level: 1,
+      type: 'divide',
+      arrays: [[12, 65, 34], [9, 56, 43, 10]],
+      description: 'Divide into two halves'
+    });
+
+    // Level 2 - Second split
+    levels.push({
+      level: 2,
+      type: 'divide',
+      arrays: [[12], [65, 34], [9, 56], [43, 10]],
+      description: 'Continue dividing'
+    });
+
+    // Level 3 - Individual elements
+    levels.push({
+      level: 3,
+      type: 'divide',
+      arrays: [[12], [65], [34], [9], [56], [43], [10]],
+      description: 'Base case: single elements (already sorted)'
+    });
+
+    // Level 4 - Start merging
+    levels.push({
+      level: 4,
+      type: 'merge',
+      arrays: [[12], [34, 65], [9, 56], [10, 43]],
+      description: 'Merge: [65] + [34] → [34, 65] and [43] + [10] → [10, 43]',
+      mergeOperations: [
+        { left: [65], right: [34], result: [34, 65] },
+        { left: [43], right: [10], result: [10, 43] }
+      ]
+    });
+
+    // Level 5 - Continue merging
+    levels.push({
+      level: 5,
+      type: 'merge',
+      arrays: [[12, 34, 65], [9, 10, 43, 56]],
+      description: 'Merge: [12] + [34, 65] → [12, 34, 65] and [9, 56] + [10, 43] → [9, 10, 43, 56]',
+      mergeOperations: [
+        { left: [12], right: [34, 65], result: [12, 34, 65] },
+        { left: [9, 56], right: [10, 43], result: [9, 10, 43, 56] }
+      ]
+    });
+
+    // Level 6 - Final merge
+    levels.push({
+      level: 6,
+      type: 'merge',
+      arrays: [[9, 10, 12, 34, 43, 56, 65]],
+      description: 'Final merge: [12, 34, 65] + [9, 10, 43, 56] → [9, 10, 12, 34, 43, 56, 65]',
+      mergeOperations: [
+        { left: [12, 34, 65], right: [9, 10, 43, 56], result: [9, 10, 12, 34, 43, 56, 65] }
+      ]
+    });
+
+    return levels;
+  };
+
+  const levels = generateMergeSortTree();
+
+  const handleNext = () => {
+    if (currentLevel < levels.length - 1) {
+      setCurrentLevel(currentLevel + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentLevel > 0) {
+      setCurrentLevel(currentLevel - 1);
+    }
+  };
+
+  const handleReset = () => {
+    setCurrentLevel(0);
+    setIsPlaying(false);
+  };
+
+  const handlePlay = () => {
+    if (currentLevel >= levels.length - 1) {
+      setCurrentLevel(0);
+    }
+    setIsPlaying(true);
+  };
+
+  React.useEffect(() => {
+    let interval;
+    if (isPlaying && currentLevel < levels.length - 1) {
+      interval = setInterval(() => {
+        setCurrentLevel(prev => {
+          if (prev >= levels.length - 1) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 2000);
+    } else if (currentLevel >= levels.length - 1) {
+      setIsPlaying(false);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, currentLevel, levels.length]);
+
+  const currentLevelData = levels[currentLevel];
+
+  return (
+    <div className="w-full max-w-7xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg">
+      <h1 className="text-3xl font-bold text-center mb-2 text-indigo-900">Merge Sort - Tree Representation</h1>
+      <p className="text-center text-gray-600 mb-6">Sorting: {`{12, 65, 34, 9, 56, 43, 10}`} in ascending order</p>
+
+      {/* Algorithm Description */}
+      <div className="bg-white p-5 rounded-lg shadow-md mb-6 border-l-4 border-indigo-600">
+        <h3 className="font-bold text-lg mb-3 text-indigo-800">Merge Sort Algorithm:</h3>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="font-mono bg-gray-50 p-3 rounded">
+            <div className="font-bold mb-2 text-blue-700">mergeSort(arr[], l, r):</div>
+            <div className="ml-3">if l &lt; r then</div>
+            <div className="ml-6">m = (l + r) / 2</div>
+            <div className="ml-6">mergeSort(arr, l, m)</div>
+            <div className="ml-6">mergeSort(arr, m+1, r)</div>
+            <div className="ml-6">merge(arr, l, m, r)</div>
+          </div>
+          <div className="bg-blue-50 p-3 rounded border border-blue-200">
+            <div className="font-bold mb-2 text-blue-800">Time Complexity:</div>
+            <div><strong>Best Case:</strong> O(n log n)</div>
+            <div><strong>Average Case:</strong> O(n log n)</div>
+            <div><strong>Worst Case:</strong> O(n log n)</div>
+            <div className="mt-2"><strong>Space:</strong> O(n)</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Current Step Info */}
+      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <span className="font-bold text-lg text-gray-700">Level {currentLevelData.level}: </span>
+            <span className={`font-semibold ${currentLevelData.type === 'divide' ? 'text-red-600' : 'text-green-600'}`}>
+              {currentLevelData.type === 'divide' ? 'DIVIDE Phase' : 'MERGE Phase'}
+            </span>
+          </div>
+          <div className="text-sm text-gray-600">Step {currentLevel + 1} of {levels.length}</div>
+        </div>
+        <div className="mt-2 text-gray-700 italic">{currentLevelData.description}</div>
+      </div>
+
+      {/* Complete Tree View */}
+      <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+        <h3 className="font-bold text-lg mb-4 text-gray-700">Merge Sort Tree:</h3>
+        
+        <div className="space-y-6">
+          {levels.map((level, levelIdx) => (
+            <div key={levelIdx} className={`transition-all duration-500 ${levelIdx <= currentLevel ? 'opacity-100' : 'opacity-30'}`}>
+              {/* Level Header */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`px-3 py-1 rounded font-bold text-sm ${
+                  level.type === 'divide' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  Level {level.level}
+                </div>
+                {levelIdx === currentLevel && (
+                  <div className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded text-sm font-semibold animate-pulse">
+                    Current Step
+                  </div>
+                )}
+              </div>
+
+              {/* Arrays at this level */}
+              <div className="flex justify-center items-center gap-8 flex-wrap">
+                {level.arrays.map((arr, arrIdx) => (
+                  <div key={arrIdx} className="flex flex-col items-center">
+                    <div className={`px-4 py-3 rounded-lg font-mono text-lg font-bold border-2 ${
+                      levelIdx === currentLevel 
+                        ? level.type === 'divide' 
+                          ? 'bg-red-50 border-red-400 text-red-900' 
+                          : 'bg-green-50 border-green-400 text-green-900'
+                        : 'bg-gray-50 border-gray-300 text-gray-700'
+                    }`}>
+                      [{arr.join(', ')}]
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Merge Operations Display */}
+              {level.mergeOperations && levelIdx === currentLevel && (
+                <div className="mt-4 space-y-3">
+                  {level.mergeOperations.map((op, opIdx) => (
+                    <div key={opIdx} className="bg-green-50 p-4 rounded-lg border border-green-300">
+                      <div className="flex items-center justify-center gap-3 text-base font-mono">
+                        <span className="bg-blue-100 px-3 py-2 rounded border border-blue-300 text-blue-900">
+                          [{op.left.join(', ')}]
+                        </span>
+                        <span className="text-2xl text-green-600 font-bold">+</span>
+                        <span className="bg-purple-100 px-3 py-2 rounded border border-purple-300 text-purple-900">
+                          [{op.right.join(', ')}]
+                        </span>
+                        <span className="text-2xl text-green-600 font-bold">→</span>
+                        <span className="bg-green-200 px-3 py-2 rounded border-2 border-green-500 text-green-900 font-bold">
+                          [{op.result.join(', ')}]
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Arrow to next level */}
+              {levelIdx < levels.length - 1 && levelIdx <= currentLevel && (
+                <div className="flex justify-center mt-3">
+                  <ChevronDown className={`${
+                    levels[levelIdx + 1].type === 'divide' ? 'text-red-500' : 'text-green-500'
+                  }`} size={32} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex justify-center gap-3 mb-4">
+        <button
+          onClick={handleReset}
+          className="px-5 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition flex items-center gap-2 font-semibold"
+        >
+          <RotateCcw size={18} />
+          Reset
+        </button>
+        <button
+          onClick={handlePrev}
+          disabled={currentLevel === 0}
+          className="px-5 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
+        >
+          Previous
+        </button>
+        <button
+          onClick={handlePlay}
+          disabled={isPlaying}
+          className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-semibold"
+        >
+          <Play size={18} />
+          {currentLevel >= levels.length - 1 ? 'Replay' : 'Auto Play'}
+        </button>
+        <button
+          onClick={handleNext}
+          disabled={currentLevel === levels.length - 1}
+          className="px-5 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
+        >
+          Next
+        </button>
+        <button
+          onClick={() => setCurrentLevel(levels.length - 1)}
+          className="px-5 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-semibold"
+        >
+          Show Final
+        </button>
+      </div>
+
+      {/* Legend */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h4 className="font-semibold mb-3 text-gray-700">Legend:</h4>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-8 bg-red-50 border-2 border-red-400 rounded flex items-center justify-center text-xs font-bold text-red-900">
+              [12, 65]
+            </div>
+            <span>Dividing phase</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-8 bg-green-50 border-2 border-green-400 rounded flex items-center justify-center text-xs font-bold text-green-900">
+              [12, 65]
+            </div>
+            <span>Merging phase</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-8 bg-yellow-200 rounded flex items-center justify-center text-xs font-bold">
+              Current
+            </div>
+            <span>Active step</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-8 bg-gray-50 border-2 border-gray-300 rounded flex items-center justify-center text-xs text-gray-600">
+              [12, 65]
+            </div>
+            <span>Not yet reached</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MergeSortVisualization;
