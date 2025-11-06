@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max Heap Step-by-Step</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 1000px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .step-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .step-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .step-info p {
+            margin: 5px 0;
+            color: #555;
+            line-height: 1.6;
+        }
+        #canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto 20px;
+            background: #fafafa;
+        }
+        .array-view {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .array-view h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .array-items {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .array-item {
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 40px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .array-item.highlight {
+            background: #ff6b6b;
+            transform: scale(1.1);
+        }
+        .array-item.swapped {
+            background: #4caf50;
+        }
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            font-size: 14px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .progress {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Max Heap Construction - Step by Step</h1>
+        <div class="subtitle">Original Array: [32, 15, 20, 30, 12, 25, 16]</div>
+        
+        <div class="progress" id="progress">Step 0: Initial Array (Binary Tree Form)</div>
+        
+        <div class="controls">
+            <button id="prevBtn" onclick="previousStep()">← Previous Step</button>
+            <button id="nextBtn" onclick="nextStep()">Next Step →</button>
+            <button onclick="reset()">Reset</button>
+        </div>
+        
+        <div class="step-info" id="stepInfo">
+            <h3>Step 0: Initial Configuration</h3>
+            <p>Starting with the array [32, 15, 20, 30, 12, 25, 16] arranged as a binary tree.</p>
+            <p>We'll use the heapify method, starting from the last non-leaf node and moving upward.</p>
+        </div>
+        
+        <canvas id="canvas" width="900" height="450"></canvas>
+        
+        <div class="array-view">
+            <h3>Current Array:</h3>
+            <div class="array-items" id="arrayDisplay"></div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background: #667eea;"></div>
+                <span>Normal Node</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ff6b6b;"></div>
+                <span>Current Node Being Heapified</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #4caf50;"></div>
+                <span>Swapped Node</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ffd93d;"></div>
+                <span>Comparing</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let currentStep = 0;
+        
+        const steps = [
+            {
+                array: [32, 15, 20, 30, 12, 25, 16],
+                title: "Step 0: Initial Configuration",
+                description: "Starting with the array [32, 15, 20, 30, 12, 25, 16] arranged as a binary tree. We'll use the heapify method, starting from the last non-leaf node (index 2, value 20) and moving upward.",
+                highlight: [],
+                comparing: [],
+                swapped: []
+            },
+            {
+                array: [32, 15, 20, 30, 12, 25, 16],
+                title: "Step 1: Heapify at index 2 (value 20)",
+                description: "Checking node 20. Its children are 25 (left) and 16 (right). Since 25 > 20, we need to swap.",
+                highlight: [2],
+                comparing: [5, 6],
+                swapped: []
+            },
+            {
+                array: [32, 15, 25, 30, 12, 20, 16],
+                title: "Step 1b: After swapping 20 and 25",
+                description: "Swapped 20 with 25. Now 25 is the parent. The subtree at index 2 is now a valid max heap.",
+                highlight: [],
+                comparing: [],
+                swapped: [2, 5]
+            },
+            {
+                array: [32, 15, 25, 30, 12, 20, 16],
+                title: "Step 2: Heapify at index 1 (value 15)",
+                description: "Checking node 15. Its children are 30 (left) and 12 (right). Since 30 > 15, we need to swap.",
+                highlight: [1],
+                comparing: [3, 4],
+                swapped: []
+            },
+            {
+                array: [32, 30, 25, 15, 12, 20, 16],
+                title: "Step 2b: After swapping 15 and 30",
+                description: "Swapped 15 with 30. Now 30 is the parent. The subtree at index 1 is now a valid max heap.",
+                highlight: [],
+                comparing: [],
+                swapped: [1, 3]
+            },
+            {
+                array: [32, 30, 25, 15, 12, 20, 16],
+                title: "Step 3: Heapify at index 0 (value 32)",
+                description: "Checking root node 32. Its children are 30 (left) and 25 (right). Since 32 > 30 and 32 > 25, no swap needed.",
+                highlight: [0],
+                comparing: [1, 2],
+                swapped: []
+            },
+            {
+                array: [32, 30, 25, 15, 12, 20, 16],
+                title: "Step 4: Max Heap Complete!",
+                description: "The array is now a valid max heap! Every parent is greater than or equal to its children. Root contains the maximum value (32).",
+                highlight: [0],
+                comparing: [],
+                swapped: []
+            }
+        ];
+        
+        class HeapNode {
+            constructor(value, x, y, index) {
+                this.value = value;
+                this.x = x;
+                this.y = y;
+                this.index = index;
+            }
+            
+            draw(color = '#667eea', strokeColor = '#5568d3') {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 30, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.value, this.x, this.y);
+                
+                // Draw index
+                ctx.fillStyle = '#666';
+                ctx.font = '12px Arial';
+                ctx.fillText(`[${this.index}]`, this.x, this.y + 45);
+            }
+        }
+        
+        function drawHeap() {
+            const step = steps[currentStep];
+            const heap = step.array;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const nodes = [];
+            const startY = 60;
+            const levelHeight = 120;
+            
+            for (let i = 0; i < heap.length; i++) {
+                const level = Math.floor(Math.log2(i + 1));
+                const posInLevel = i - (Math.pow(2, level) - 1);
+                const nodesInLevel = Math.pow(2, level);
+                const spacing = canvas.width / (nodesInLevel + 1);
+                
+                const x = spacing * (posInLevel + 1);
+                const y = startY + level * levelHeight;
+                
+                nodes.push(new HeapNode(heap[i], x, y, i));
+            }
+            
+            // Draw edges
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < heap.length; i++) {
+                const leftChild = 2 * i + 1;
+                const rightChild = 2 * i + 2;
+                
+                if (leftChild < heap.length) {
+                    ctx.beginPath();
+                    ctx.moveTo(nodes[i].x, nodes[i].y + 30);
+                    ctx.lineTo(nodes[leftChild].x, nodes[leftChild].y - 30);
+                    ctx.stroke();
+                }
+                
+                if (rightChild < heap.length) {
+                    ctx.beginPath();
+                    ctx.moveTo(nodes[i].x, nodes[i].y + 30);
+                    ctx.lineTo(nodes[rightChild].x, nodes[rightChild].y - 30);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw nodes with appropriate colors
+            nodes.forEach((node, i) => {
+                let color = '#667eea';
+                let strokeColor = '#5568d3';
+                
+                if (step.highlight.includes(i)) {
+                    color = '#ff6b6b';
+                    strokeColor = '#ff5252';
+                } else if (step.comparing.includes(i)) {
+                    color = '#ffd93d';
+                    strokeColor = '#ffc107';
+                } else if (step.swapped.includes(i)) {
+                    color = '#4caf50';
+                    strokeColor = '#2e7d32';
+                }
+                
+                node.draw(color, strokeColor);
+            });
+        }
+        
+        function updateDisplay() {
+            const step = steps[currentStep];
+            
+            document.getElementById('progress').textContent = step.title;
+            document.getElementById('stepInfo').innerHTML = `
+                <h3>${step.title}</h3>
+                <p>${step.description}</p>
+            `;
+            
+            const arrayDisplay = document.getElementById('arrayDisplay');
+            arrayDisplay.innerHTML = '';
+            step.array.forEach((val, idx) => {
+                const div = document.createElement('div');
+                div.className = 'array-item';
+                if (step.highlight.includes(idx)) div.classList.add('highlight');
+                if (step.swapped.includes(idx)) div.classList.add('swapped');
+                div.textContent = val;
+                arrayDisplay.appendChild(div);
+            });
+            
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === steps.length - 1;
+            
+            drawHeap();
+        }
+        
+        function nextStep() {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                updateDisplay();
+            }
+        }
+        
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateDisplay();
+            }
+        }
+        
+        function reset() {
+            currentStep = 0;
+            updateDisplay();
+        }
+        
+        updateDisplay();
+    </script>
+</body>
+</html>
