@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heap Sort Visualization</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 1100px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .phase-badge {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .phase-badge.build {
+            background: #4ecdc4;
+        }
+        .phase-badge.sort {
+            background: #ff6b6b;
+        }
+        .step-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .step-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .step-info p {
+            margin: 5px 0;
+            color: #555;
+            line-height: 1.6;
+        }
+        #canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto 20px;
+            background: #fafafa;
+        }
+        .array-view {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .array-view h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .array-container {
+            display: flex;
+            gap: 30px;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        .array-section {
+            flex: 1;
+            min-width: 250px;
+        }
+        .array-items {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .array-item {
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 40px;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .array-item.highlight {
+            background: #ff6b6b;
+            transform: scale(1.1);
+        }
+        .array-item.swapped {
+            background: #4caf50;
+        }
+        .array-item.sorted {
+            background: #95e1d3;
+        }
+        .array-item.comparing {
+            background: #ffd93d;
+        }
+        .legend {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .progress {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Heap Sort Algorithm - Step by Step</h1>
+        <div class="subtitle">Input Array: [35, 15, 40, 1, 60]</div>
+        
+        <div class="progress" id="progress">Step 0: Initial Array</div>
+        
+        <div class="controls">
+            <button id="prevBtn" onclick="previousStep()">← Previous Step</button>
+            <button id="nextBtn" onclick="nextStep()">Next Step →</button>
+            <button onclick="reset()">Reset</button>
+        </div>
+        
+        <div class="step-info" id="stepInfo">
+            <span class="phase-badge" id="phaseBadge">PHASE 1: BUILD MAX HEAP</span>
+            <h3>Step 0: Initial Configuration</h3>
+            <p>Starting with unsorted array [35, 15, 40, 1, 60]</p>
+        </div>
+        
+        <canvas id="canvas" width="900" height="400"></canvas>
+        
+        <div class="array-view">
+            <div class="array-container">
+                <div class="array-section">
+                    <h3>Current Heap:</h3>
+                    <div class="array-items" id="heapDisplay"></div>
+                </div>
+                <div class="array-section">
+                    <h3>Sorted Array:</h3>
+                    <div class="array-items" id="sortedDisplay"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background: #667eea;"></div>
+                <span>Heap Element</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ff6b6b;"></div>
+                <span>Current/Root</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #4caf50;"></div>
+                <span>Swapped</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ffd93d;"></div>
+                <span>Comparing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #95e1d3;"></div>
+                <span>Sorted</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let currentStep = 0;
+        
+        const steps = [
+            {
+                heap: [35, 15, 40, 1, 60],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 0: Initial Array",
+                description: "Starting with unsorted array [35, 15, 40, 1, 60]. We'll first build a max heap.",
+                highlight: [],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [35, 15, 40, 1, 60],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 1: Heapify at index 1 (value 15)",
+                description: "Starting from last non-leaf node (index 1). Comparing 15 with children 1 and 60. Since 60 > 15, we swap.",
+                highlight: [1],
+                comparing: [3, 4],
+                swapped: []
+            },
+            {
+                heap: [35, 60, 40, 1, 15],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 1b: After swap (15 ↔ 60)",
+                description: "Swapped 15 with 60. Array is now [35, 60, 40, 1, 15]",
+                highlight: [],
+                comparing: [],
+                swapped: [1, 4]
+            },
+            {
+                heap: [35, 60, 40, 1, 15],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 2: Heapify at index 0 (value 35)",
+                description: "Checking root node 35. Children are 60 and 40. Since 60 > 35, we swap with the larger child.",
+                highlight: [0],
+                comparing: [1, 2],
+                swapped: []
+            },
+            {
+                heap: [60, 35, 40, 1, 15],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 2b: After swap (35 ↔ 60)",
+                description: "Swapped 35 with 60. Now need to continue heapifying at index 1.",
+                highlight: [],
+                comparing: [],
+                swapped: [0, 1]
+            },
+            {
+                heap: [60, 35, 40, 1, 15],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 2c: Heapify at index 1 (value 35)",
+                description: "Checking 35 at index 1. Children are 1 and 15. 35 > both children, so heap property satisfied.",
+                highlight: [1],
+                comparing: [3, 4],
+                swapped: []
+            },
+            {
+                heap: [60, 35, 40, 1, 15],
+                sorted: [],
+                phase: "BUILD",
+                title: "Step 3: Max Heap Built!",
+                description: "Max heap construction complete! Array: [60, 35, 40, 1, 15]. Now begins the sorting phase.",
+                highlight: [0],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [60, 35, 40, 1, 15],
+                sorted: [],
+                phase: "SORT",
+                title: "Step 4: Sorting - Extract maximum (60)",
+                description: "Swap root (60) with last element (15). Then reduce heap size and heapify.",
+                highlight: [0, 4],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [15, 35, 40, 1],
+                sorted: [60],
+                phase: "SORT",
+                title: "Step 4b: After extracting 60",
+                description: "60 is now in sorted position. Heapify the remaining elements [15, 35, 40, 1].",
+                highlight: [0],
+                comparing: [1, 2],
+                swapped: []
+            },
+            {
+                heap: [40, 35, 15, 1],
+                sorted: [60],
+                phase: "SORT",
+                title: "Step 4c: After heapify",
+                description: "After heapifying, 40 is now at root. Heap: [40, 35, 15, 1]",
+                highlight: [],
+                comparing: [],
+                swapped: [0, 2]
+            },
+            {
+                heap: [40, 35, 15, 1],
+                sorted: [60],
+                phase: "SORT",
+                title: "Step 5: Extract maximum (40)",
+                description: "Swap root (40) with last element (1). Reduce heap size.",
+                highlight: [0, 3],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [1, 35, 15],
+                sorted: [40, 60],
+                phase: "SORT",
+                title: "Step 5b: After extracting 40",
+                description: "40 is sorted. Heapify remaining elements [1, 35, 15].",
+                highlight: [0],
+                comparing: [1, 2],
+                swapped: []
+            },
+            {
+                heap: [35, 1, 15],
+                sorted: [40, 60],
+                phase: "SORT",
+                title: "Step 5c: After heapify",
+                description: "After heapifying, 35 is at root. Heap: [35, 1, 15]",
+                highlight: [],
+                comparing: [],
+                swapped: [0, 1]
+            },
+            {
+                heap: [35, 1, 15],
+                sorted: [40, 60],
+                phase: "SORT",
+                title: "Step 6: Extract maximum (35)",
+                description: "Swap root (35) with last element (15). Reduce heap size.",
+                highlight: [0, 2],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [15, 1],
+                sorted: [35, 40, 60],
+                phase: "SORT",
+                title: "Step 6b: After extracting 35",
+                description: "35 is sorted. Heapify remaining elements [15, 1].",
+                highlight: [0],
+                comparing: [1],
+                swapped: []
+            },
+            {
+                heap: [15, 1],
+                sorted: [35, 40, 60],
+                phase: "SORT",
+                title: "Step 6c: Heap property satisfied",
+                description: "15 > 1, so heap property is satisfied. Heap: [15, 1]",
+                highlight: [],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [15, 1],
+                sorted: [35, 40, 60],
+                phase: "SORT",
+                title: "Step 7: Extract maximum (15)",
+                description: "Swap root (15) with last element (1). Only one element left.",
+                highlight: [0, 1],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [1],
+                sorted: [15, 35, 40, 60],
+                phase: "SORT",
+                title: "Step 7b: After extracting 15",
+                description: "15 is sorted. One element remaining.",
+                highlight: [0],
+                comparing: [],
+                swapped: []
+            },
+            {
+                heap: [],
+                sorted: [1, 15, 35, 40, 60],
+                phase: "SORT",
+                title: "Step 8: Sorting Complete! ✓",
+                description: "All elements extracted and sorted! Final sorted array: [1, 15, 35, 40, 60]",
+                highlight: [],
+                comparing: [],
+                swapped: []
+            }
+        ];
+        
+        class HeapNode {
+            constructor(value, x, y, index) {
+                this.value = value;
+                this.x = x;
+                this.y = y;
+                this.index = index;
+            }
+            
+            draw(color = '#667eea', strokeColor = '#5568d3') {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 28, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.value, this.x, this.y);
+            }
+        }
+        
+        function drawHeap() {
+            const step = steps[currentStep];
+            const heap = step.heap;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (heap.length === 0) {
+                ctx.fillStyle = '#4caf50';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Heap is empty - All elements sorted! ✓', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+            
+            const nodes = [];
+            const startY = 60;
+            const levelHeight = 110;
+            
+            for (let i = 0; i < heap.length; i++) {
+                const level = Math.floor(Math.log2(i + 1));
+                const posInLevel = i - (Math.pow(2, level) - 1);
+                const nodesInLevel = Math.pow(2, level);
+                const spacing = canvas.width / (nodesInLevel + 1);
+                
+                const x = spacing * (posInLevel + 1);
+                const y = startY + level * levelHeight;
+                
+                nodes.push(new HeapNode(heap[i], x, y, i));
+            }
+            
+            // Draw edges
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < heap.length; i++) {
+                const leftChild = 2 * i + 1;
+                const rightChild = 2 * i + 2;
+                
+                if (leftChild < heap.length) {
+                    ctx.beginPath();
+                    ctx.moveTo(nodes[i].x, nodes[i].y + 28);
+                    ctx.lineTo(nodes[leftChild].x, nodes[leftChild].y - 28);
+                    ctx.stroke();
+                }
+                
+                if (rightChild < heap.length) {
+                    ctx.beginPath();
+                    ctx.moveTo(nodes[i].x, nodes[i].y + 28);
+                    ctx.lineTo(nodes[rightChild].x, nodes[rightChild].y - 28);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw nodes
+            nodes.forEach((node, i) => {
+                let color = '#667eea';
+                let strokeColor = '#5568d3';
+                
+                if (step.highlight.includes(i)) {
+                    color = '#ff6b6b';
+                    strokeColor = '#ff5252';
+                } else if (step.comparing.includes(i)) {
+                    color = '#ffd93d';
+                    strokeColor = '#ffc107';
+                } else if (step.swapped.includes(i)) {
+                    color = '#4caf50';
+                    strokeColor = '#2e7d32';
+                }
+                
+                node.draw(color, strokeColor);
+            });
+        }
+        
+        function updateDisplay() {
+            const step = steps[currentStep];
+            
+            document.getElementById('progress').textContent = step.title;
+            
+            const phaseBadge = document.getElementById('phaseBadge');
+            if (step.phase === "BUILD") {
+                phaseBadge.textContent = "PHASE 1: BUILD MAX HEAP";
+                phaseBadge.className = "phase-badge build";
+            } else {
+                phaseBadge.textContent = "PHASE 2: SORTING";
+                phaseBadge.className = "phase-badge sort";
+            }
+            
+            document.getElementById('stepInfo').innerHTML = `
+                <span class="phase-badge ${step.phase === 'BUILD' ? 'build' : 'sort'}" id="phaseBadge">${step.phase === 'BUILD' ? 'PHASE 1: BUILD MAX HEAP' : 'PHASE 2: SORTING'}</span>
+                <h3>${step.title}</h3>
+                <p>${step.description}</p>
+            `;
+            
+            // Display heap
+            const heapDisplay = document.getElementById('heapDisplay');
+            heapDisplay.innerHTML = '';
+            if (step.heap.length === 0) {
+                heapDisplay.innerHTML = '<div style="color: #999; padding: 10px;">Empty</div>';
+            } else {
+                step.heap.forEach((val, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'array-item';
+                    if (step.highlight.includes(idx)) div.classList.add('highlight');
+                    if (step.swapped.includes(idx)) div.classList.add('swapped');
+                    if (step.comparing.includes(idx)) div.classList.add('comparing');
+                    div.textContent = val;
+                    heapDisplay.appendChild(div);
+                });
+            }
+            
+            // Display sorted array
+            const sortedDisplay = document.getElementById('sortedDisplay');
+            sortedDisplay.innerHTML = '';
+            if (step.sorted.length === 0) {
+                sortedDisplay.innerHTML = '<div style="color: #999; padding: 10px;">Empty</div>';
+            } else {
+                step.sorted.forEach(val => {
+                    const div = document.createElement('div');
+                    div.className = 'array-item sorted';
+                    div.textContent = val;
+                    sortedDisplay.appendChild(div);
+                });
+            }
+            
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === steps.length - 1;
+            
+            drawHeap();
+        }
+        
+        function nextStep() {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                updateDisplay();
+            }
+        }
+        
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateDisplay();
+            }
+        }
+        
+        function reset() {
+            currentStep = 0;
+            updateDisplay();
+        }
+        
+        updateDisplay();
+    </script>
+</body>
+</html>
